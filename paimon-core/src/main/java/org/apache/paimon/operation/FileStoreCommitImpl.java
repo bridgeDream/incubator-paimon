@@ -40,7 +40,7 @@ import org.apache.paimon.options.MemorySize;
 import org.apache.paimon.predicate.Predicate;
 import org.apache.paimon.predicate.PredicateBuilder;
 import org.apache.paimon.schema.SchemaManager;
-import org.apache.paimon.stats.Stats;
+import org.apache.paimon.stats.Statistics;
 import org.apache.paimon.stats.StatsFileHandler;
 import org.apache.paimon.table.sink.CommitMessage;
 import org.apache.paimon.table.sink.CommitMessageImpl;
@@ -392,8 +392,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
                 // sanity check, all changes must be done within the given partition
                 if (partitionFilter != null) {
                     for (ManifestEntry entry : appendTableFiles) {
-                        if (!partitionFilter.test(
-                                partitionObjectConverter.convert(entry.partition()))) {
+                        if (!partitionFilter.test(entry.partition())) {
                             throw new IllegalArgumentException(
                                     "Trying to overwrite partition "
                                             + partition
@@ -513,7 +512,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
     }
 
     @Override
-    public void commitStatistics(Stats stats, long commitIdentifier) {
+    public void commitStatistics(Statistics stats, long commitIdentifier) {
         String statsFileName = statsFileHandler.writeStats(stats);
         tryCommit(
                 Collections.emptyList(),
@@ -651,13 +650,10 @@ public class FileStoreCommitImpl implements FileStoreCommit {
 
                 // collect index files
                 if (latestSnapshot.indexManifest() != null) {
-                    RowDataToObjectArrayConverter converter =
-                            new RowDataToObjectArrayConverter(partitionType);
                     List<IndexManifestEntry> entries =
                             indexManifestFile.read(latestSnapshot.indexManifest());
                     for (IndexManifestEntry entry : entries) {
-                        if (partitionFilter == null
-                                || partitionFilter.test(converter.convert(entry.partition()))) {
+                        if (partitionFilter == null || partitionFilter.test(entry.partition())) {
                             indexChangesWithOverwrite.add(entry.toDeleteEntry());
                         }
                     }
@@ -786,7 +782,7 @@ public class FileStoreCommitImpl implements FileStoreCommit {
             if (newStatsFileName != null) {
                 statsFileName = newStatsFileName;
             } else if (latestSnapshot != null) {
-                Optional<Stats> previousStatistic = statsFileHandler.readStats(latestSnapshot);
+                Optional<Statistics> previousStatistic = statsFileHandler.readStats(latestSnapshot);
                 if (previousStatistic.isPresent()) {
                     if (previousStatistic.get().schemaId() != latestSchemaId) {
                         LOG.warn("Schema changed, stats will not be inherited");

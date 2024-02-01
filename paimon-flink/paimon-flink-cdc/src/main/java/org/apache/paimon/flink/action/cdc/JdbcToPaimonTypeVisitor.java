@@ -16,15 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.paimon.compression;
+package org.apache.paimon.flink.action.cdc;
 
-/**
- * Each compression codec has an implementation of {@link BlockCompressionFactory} to create
- * compressors and decompressors.
- */
-public interface BlockCompressionFactory {
+import org.apache.paimon.types.DataType;
 
-    BlockCompressor getCompressor();
+import javax.annotation.Nullable;
 
-    BlockDecompressor getDecompressor();
+/** jdbc to paimon data type visitor. */
+@FunctionalInterface
+public interface JdbcToPaimonTypeVisitor {
+    DataType visit(
+            String type,
+            @Nullable Integer length,
+            @Nullable Integer scale,
+            TypeMapping typeMapping);
 }
