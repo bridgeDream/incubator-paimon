@@ -20,6 +20,7 @@ package org.apache.paimon.utils;
 
 import org.apache.paimon.Snapshot;
 import org.apache.paimon.fs.FileIO;
+import org.apache.paimon.fs.FileStatus;
 import org.apache.paimon.fs.Path;
 import org.apache.paimon.schema.SchemaManager;
 
@@ -27,7 +28,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import static org.apache.paimon.utils.FileUtils.listVersionedFileStatus;
 import static org.apache.paimon.utils.Preconditions.checkArgument;
 
 /** Manager for {@code Branch}. */
@@ -36,6 +42,7 @@ public class BranchManager {
     private static final Logger LOG = LoggerFactory.getLogger(BranchManager.class);
 
     public static final String BRANCH_PREFIX = "branch-";
+    public static final String DEFAULT_MAIN_BRANCH = "main";
 
     private final FileIO fileIO;
     private final Path tablePath;
@@ -72,6 +79,11 @@ public class BranchManager {
     }
 
     public void createBranch(String branchName, String tagName) {
+        checkArgument(
+                !branchName.equals(DEFAULT_MAIN_BRANCH),
+                String.format(
+                        "Branch name '%s' is the default branch and cannot be used.",
+                        DEFAULT_MAIN_BRANCH));
         checkArgument(!StringUtils.isBlank(branchName), "Branch name '%s' is blank.", branchName);
         checkArgument(!branchExists(branchName), "Branch name '%s' already exists.", branchName);
         checkArgument(tagManager.tagExists(tagName), "Tag name '%s' not exists.", tagName);
@@ -132,5 +144,25 @@ public class BranchManager {
     public boolean branchExists(String branchName) {
         Path branchPath = branchPath(branchName);
         return fileExists(branchPath);
+    }
+
+    /** Get branch->tag pair. */
+    public Map<String, String> branches() {
+        Map<String, String> branchTags = new HashMap<>();
+
+        try {
+            List<Path> paths =
+                    listVersionedFileStatus(fileIO, branchDirectory(), BRANCH_PREFIX)
+                            .map(FileStatus::getPath)
+                            .collect(Collectors.toList());
+            for (Path path : paths) {
+                String branchName = path.getName().substring(BRANCH_PREFIX.length());
+                branchTags.put(branchName, tagManager.branchTags(branchName).get(0));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return branchTags;
     }
 }

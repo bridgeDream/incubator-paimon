@@ -15,33 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.paimon.spark.procedure
 
-package org.apache.paimon.table;
-
-import org.apache.paimon.CoreOptions;
-import org.apache.paimon.fs.FileIO;
-import org.apache.paimon.fs.Path;
-import org.apache.paimon.table.source.snapshot.SnapshotReader;
-import org.apache.paimon.utils.BranchManager;
-import org.apache.paimon.utils.SnapshotManager;
-import org.apache.paimon.utils.TagManager;
-
-/** A {@link Table} for data. */
-public interface DataTable extends InnerTable {
-
-    SnapshotReader newSnapshotReader();
-
-    SnapshotReader newSnapshotReader(String branchName);
-
-    CoreOptions coreOptions();
-
-    SnapshotManager snapshotManager();
-
-    TagManager tagManager();
-
-    BranchManager branchManager();
-
-    Path location();
-
-    FileIO fileIO();
-}
+class ProcedureTest extends ProcedureTestBase {}
